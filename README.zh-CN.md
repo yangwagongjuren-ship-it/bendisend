@@ -20,6 +20,8 @@
 3. 其他设备连到同一个 Wi-Fi，扫描房间二维码，或在浏览器打开邀请链接。
 4. 在输入区发送文字和文件。接收消息中的文件与文字会显示为独立卡片。
 
+Windows 上如果装有 Edge 或 Chrome，BendiSend 会优先在独立应用窗口中打开；否则使用系统默认浏览器。
+
 其他设备使用期间，请保持主机程序运行。首次启动会自动创建默认房间。主机可通过顶部房间菜单添加或切换房间；每个房间都有自己的二维码和邀请链接，需分别分享给参与者。
 
 ## 保存和上限
@@ -54,3 +56,4 @@ go build -trimpath -o BendiSend.exe .
 ## 许可
 
 BendiSend 使用 MIT 许可证。第三方依赖声明见 [THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt)。
+
