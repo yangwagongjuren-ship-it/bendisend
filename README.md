@@ -20,6 +20,8 @@
 3. Connect the other devices to the same Wi-Fi, then scan the room QR code or open its invitation link in a browser.
 4. Send text and files from the composer. Files and text appear as separate cards in the received message.
 
+On Windows, BendiSend opens Edge or Chrome in a standalone app window when available, then falls back to your default browser.
+
 Keep the host app running while other devices use it. The default room is created automatically. On the host, use the room selector to create or switch rooms. Each new room has its own invitation link and QR code; share that room's invitation with participants.
 
 ## Storage and limits
