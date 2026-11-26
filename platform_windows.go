@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"syscall"
 	"unsafe"
 )
@@ -46,6 +48,13 @@ func lockRoom(path string) (*os.File, error) {
 }
 
 func openBrowser(url string) error {
+	for _, browser := range standaloneBrowsers() {
+		command := exec.Command(browser, "--app="+url)
+		if err := command.Start(); err == nil {
+			_ = command.Process.Release()
+			return nil
+		}
+	}
 	open := syscall.StringToUTF16Ptr("open")
 	address := syscall.StringToUTF16Ptr(url)
 	proc := syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW")
@@ -56,9 +65,39 @@ func openBrowser(url string) error {
 	return nil
 }
 
+func standaloneBrowsers() []string {
+	programDirs := []string{os.Getenv("ProgramFiles"), os.Getenv("ProgramFiles(x86)"), os.Getenv("LocalAppData")}
+	var candidates []string
+	for _, dir := range programDirs {
+		if dir == "" {
+			continue
+		}
+		candidates = append(candidates,
+			filepath.Join(dir, "Microsoft", "Edge", "Application", "msedge.exe"),
+			filepath.Join(dir, "Google", "Chrome", "Application", "chrome.exe"))
+	}
+	for _, name := range []string{"msedge.exe", "chrome.exe"} {
+		if path, err := exec.LookPath(name); err == nil {
+			candidates = append(candidates, path)
+		}
+	}
+	seen := make(map[string]bool, len(candidates))
+	found := make([]string, 0, len(candidates))
+	for _, path := range candidates {
+		if path != "" && !seen[path] {
+			if _, err := os.Stat(path); err == nil {
+				seen[path] = true
+				found = append(found, path)
+			}
+		}
+	}
+	return found
+}
+
 func showStartupError(message string) {
 	body := syscall.StringToUTF16Ptr(message)
 	title := syscall.StringToUTF16Ptr("本地传 · BendiSend")
 	proc := syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW")
 	proc.Call(0, uintptr(unsafe.Pointer(body)), uintptr(unsafe.Pointer(title)), 0x10)
 }
+
