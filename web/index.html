@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f6f3">
+  <title>本地传 · BendiSend</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/i18n.js" defer></script>
+  <script src="/rooms.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <div class="brand-controls">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span data-i18n="product">本地传 · BendiSend</span></div>
+        <select id="room-select" class="room-select" aria-label="切换房间" data-i18n-aria-label="switchRoom" disabled><option value="default" data-i18n="defaultRoom">默认房间</option></select>
+        <label class="language-control"><span data-i18n="language">语言</span><select id="language-select" class="room-select" aria-label="语言"><option value="zh-CN">中文</option><option value="en">English</option></select></label>
+      </div>
+      <div class="connection" id="connection" data-state="waiting" role="status"><span></span><b id="connection-label">正在连接</b></div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section id="join-view" class="join-view card" aria-labelledby="join-heading">
+      <h1 id="join-heading" data-i18n="openingRoom">正在打开房间</h1>
+      <p id="join-message" role="status" data-i18n="pleaseWait">请稍候。</p>
+      <button type="button" id="retry-join" class="button primary" data-i18n="retry" hidden>重新连接</button>
+    </section>
+
+    <div class="workspace" id="room-view" hidden>
+      <aside class="card sidebar" id="invite" aria-labelledby="invite-heading">
+        <div class="section-title">
+          <h2 id="invite-heading" tabindex="-1" data-i18n="connectDevices">连接设备</h2>
+          <button type="button" id="close-devices" class="plain mobile-only" aria-label="关闭设备栏" data-i18n-aria-label="close" data-i18n="close">关闭</button>
+        </div>
+        <p class="muted" data-i18n="sameWifi">连到同一个 Wi‑Fi</p>
+        <div id="invite-content" class="invite-content" hidden>
+          <div class="qr-frame"><img id="qr" alt="加入房间的二维码" data-i18n-alt="qrAlt" width="156" height="156"></div>
+          <p class="scan-label" data-i18n="scanPhone">手机扫码</p>
+          <p class="divider" data-i18n="or">或</p>
+          <button class="button secondary invite-copy" type="button" id="copy-invite" data-i18n="copyInvite">复制邀请链接，打开即用</button>
+        </div>
+        <p id="invite-message" class="invite-message muted" role="status"></p>
+        <section class="devices" aria-labelledby="devices-heading">
+          <h3 id="devices-heading" data-i18n="devices">设备</h3>
+          <ul id="device-list" aria-label="设备" data-i18n-aria-label="devices"></ul>
+        </section>
+      </aside>
+
+      <section class="card chat" aria-labelledby="chat-heading">
+        <header class="chat-head">
+          <div><h1 id="chat-heading" data-i18n="inbox">共享收件箱</h1><p id="room-retention-label" class="muted">记录保留 7 天</p></div>
+          <div class="chat-actions">
+            <button type="button" class="button secondary" id="manage-room" data-i18n="manageRoom" hidden>房间管理</button>
+            <button type="button" class="button secondary" id="edit-limits" data-i18n="transferLimits" hidden>传输上限</button>
+            <button type="button" class="button secondary mobile-only" id="toggle-devices" aria-controls="invite" aria-expanded="false" data-i18n="connectDevices">连接设备</button>
+          </div>
+        </header>
+
+        <div class="timeline" id="timeline" tabindex="0" aria-label="消息时间线" data-i18n-aria-label="timeline">
+          <div class="empty" id="empty-state"><h2 data-i18n="noMessages">还没有消息</h2><p class="muted" data-i18n="sendBelow">在下方发送文字或附件。</p></div>
+          <ol class="messages" id="messages" aria-label="传输消息" data-i18n-aria-label="messages" hidden></ol>
+        </div>
+
+        <form class="composer" id="composer" aria-label="编辑待发消息" data-i18n-aria-label="editMessage">
+          <div class="composer-field attachments" id="attachment-field" hidden>
+            <div class="field-name" id="attachment-label" data-i18n="pendingAttachments">待发送附件</div>
+            <ul id="attachment-list" class="attachment-list" aria-labelledby="attachment-label"></ul>
+          </div>
+          <div class="composer-field text-field">
+            <label class="field-name" for="text-input" data-i18n="text">文字</label>
+            <textarea id="text-input" rows="2" enterkeyhint="send" placeholder="粘贴文字，或拖入文件…" data-i18n-placeholder="inputPlaceholder"></textarea>
+          </div>
+          <div class="transfer-progress" id="transfer-progress" hidden>
+            <div class="progress-label" id="progress-label" role="status"></div>
+            <progress id="progress-bar" max="100" value="0" aria-label="上传进度"></progress>
+            <button type="button" id="cancel-upload" class="plain" data-i18n="cancelUpload">取消上传</button>
+          </div>
+          <div class="composer-notice" id="composer-notice" hidden>
+            <p role="status" id="notice-text"></p>
+            <button class="plain" type="button" id="notice-limits" data-i18n="changeLimits" hidden>修改上限</button>
+          </div>
+          <div class="composer-toolbar">
+            <input type="file" id="file-input" multiple hidden>
+            <button type="button" id="choose-files" class="plain files-button"><span class="paperclip" aria-hidden="true"></span><span id="choose-label" data-i18n="chooseFile">选择文件</span></button>
+            <span class="muted drag-hint" data-i18n="dragFiles">也可拖入文件</span>
+            <span class="muted key-hint" data-i18n="enterHint">Enter 发送 · Shift+Enter 换行</span>
+            <button class="button primary send-button" type="submit" id="send" disabled data-i18n="send">发送</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <section class="shell benefits" aria-label="产品优势">
+    <article><h2 data-i18n="localTitle">本地运行，无需云服务器</h2><p data-i18n="localText">文字和文件保存在运行主机上，不上传第三方云服务。</p></article>
+    <article><h2 data-i18n="roomsTitle">多个独立房间</h2><p data-i18n="roomsText">不同房间各自拥有邀请链接、记录和保留期。</p></article>
+    <article><h2 data-i18n="fileSizeTitle">文件上限可调整</h2><p data-i18n="fileSizeText">没有云端套餐限额；实际受主机磁盘空间约束。</p></article>
+  </section>
+
+  <dialog id="add-room-dialog" class="dialog" aria-labelledby="add-room-heading">
+    <form id="add-room-form">
+      <h2 id="add-room-heading" data-i18n="addRoom">添加房间</h2>
+      <label for="new-room-name" data-i18n="roomName">房间名称</label>
+      <input id="new-room-name" required maxlength="80" placeholder="例如：工作资料" data-i18n-placeholder="roomExample">
+      <p id="add-room-error" class="dialog-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="button secondary" id="close-add-room" data-i18n="cancel">取消</button>
+        <button type="submit" class="button primary" id="create-room" data-i18n="createRoom">创建房间</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="manage-room-dialog" class="dialog" aria-labelledby="manage-room-heading">
+    <h2 id="manage-room-heading" data-i18n="manageRoom">房间管理</h2>
+    <form id="retention-form">
+      <label for="retention-days" data-i18n="retentionTime">记录保留时间</label>
+      <div class="retention-controls">
+        <select id="retention-days">
+          <option value="1" data-i18n="oneDay">1 天</option>
+          <option value="7" data-i18n="sevenDays">7 天</option>
+          <option value="30" data-i18n="thirtyDays">30 天</option>
+          <option value="0" data-i18n="longTerm">长期保留</option>
+        </select>
+        <button type="submit" class="button primary" id="save-retention" data-i18n="save">保存</button>
+      </div>
+    </form>
+    <p id="room-management-result" class="muted" role="status" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="button secondary" id="retry-clear" data-i18n="retryClear" hidden>重试未清理记录</button>
+      <button type="button" class="button secondary destructive" id="clear-room" data-i18n="clearRoom">清空本房间</button>
+      <button type="button" class="button secondary destructive" id="delete-room" data-i18n="deleteRoom">删除房间</button>
+      <button type="button" class="button secondary" id="close-manage-room" data-i18n="close">关闭</button>
+    </div>
+  </dialog>
+
+  <dialog id="limits-dialog" class="dialog" aria-labelledby="limits-heading">
+    <form id="limits-form">
+      <h2 id="limits-heading" data-i18n="limitsTitle">传输上限</h2>
+      <p class="muted" id="limits-usage" role="status"></p>
+      <label for="max-file" data-i18n="singleFileLimit">单文件上限（GiB）</label>
+      <input id="max-file" type="number" inputmode="decimal" min="0" step="any" required>
+      <label for="max-room" data-i18n="sharedQuota">所有房间共享总额（GiB）</label>
+      <input id="max-room" type="number" inputmode="decimal" min="0" step="any" required>
+      <p class="dialog-error" id="limits-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="button secondary" id="close-limits" data-i18n="cancel">取消</button>
+        <button type="submit" class="button primary" id="save-limits" data-i18n="save">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="copy-dialog" class="dialog" aria-labelledby="copy-heading">
+    <form method="dialog">
+      <h2 id="copy-heading" data-i18n="manualCopy">手动复制</h2>
+      <label for="copy-value" data-i18n="manualCopyPrompt">长按或使用系统快捷键复制已选内容。</label>
+      <textarea id="copy-value" readonly rows="4"></textarea>
+      <div class="dialog-actions"><button class="button secondary" data-i18n="close">关闭</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
